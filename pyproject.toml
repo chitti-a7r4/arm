@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sms-guard-ps3"
+version = "0.1.0"
+description = "Offline SMS triage for Arm Linux"
+requires-python = ">=3.9"
+
+[project.scripts]
+sms-guard = "sms_guard.__main__:main"
+
+[tool.setuptools]
+packages = ["sms_guard"]
+
+[tool.setuptools.package-data]
+sms_guard = ["model.json"]
