@@ -1,0 +1,91 @@
+Linux 6.18.50+rpt-rpi-v8 aarch64
+PRETTY_NAME="Debian GNU/Linux 13 (trixie)"
+NAME="Debian GNU/Linux"
+VERSION_ID="13"
+VERSION="13 (trixie)"
+VERSION_CODENAME=trixie
+DEBIAN_VERSION_FULL=13.7
+ID=debian
+HOME_URL="https://www.debian.org/"
+SUPPORT_URL="https://www.debian.org/support"
+BUG_REPORT_URL="https://bugs.debian.org/"
+Raspberry Pi 4 Model B Rev 1.2
+Python 3.13.5
+{
+  "verdict": "no strong signal",
+  "spam_model_score": 2e-05,
+  "evidence": [],
+  "action": "If the request is unexpected, verify it independently.",
+  "detector_ms": 15.053,
+  "adviser": "local Llama / ExecuTorch",
+  "priority_guidance": "If the request is unexpected, verify it independently.",
+  "adviser_ms": 19390.352
+}
+wall_s=19.61 cpu=163% peak_process_kib=1024832 exit=0
+{
+  "verdict": "no strong signal",
+  "spam_model_score": 2e-05,
+  "evidence": [],
+  "action": "If the request is unexpected, verify it independently.",
+  "detector_ms": 15.019,
+  "adviser": "local Llama / ExecuTorch",
+  "priority_guidance": "If the request is unexpected, verify it independently.",
+  "adviser_ms": 19393.824
+}
+wall_s=19.61 cpu=162% peak_process_kib=1024844 exit=0
+{
+  "verdict": "no strong signal",
+  "spam_model_score": 2e-05,
+  "evidence": [],
+  "action": "If the request is unexpected, verify it independently.",
+  "detector_ms": 14.896,
+  "adviser": "local Llama / ExecuTorch",
+  "priority_guidance": "If the request is unexpected, verify it independently.",
+  "adviser_ms": 19396.931
+}
+wall_s=19.61 cpu=163% peak_process_kib=1024844 exit=0
+{
+  "verdict": "review",
+  "spam_model_score": 0.81124,
+  "evidence": [
+    "Contains a web link.",
+    "Uses urgency or account restrictions.",
+    "Wording resembles messages labelled as spam in the training set."
+  ],
+  "action": "Leave the message untouched. Check with the sender through an independently known channel.",
+  "detector_ms": 15.368,
+  "adviser": "local Llama / ExecuTorch",
+  "priority_guidance": "A link in a message can lead somewhere unexpected. Open the service's app yourself to check.",
+  "adviser_ms": 25140.669
+}
+wall_s=25.36 cpu=194% peak_process_kib=1025048 exit=0
+{
+  "verdict": "review",
+  "spam_model_score": 0.81124,
+  "evidence": [
+    "Contains a web link.",
+    "Uses urgency or account restrictions.",
+    "Wording resembles messages labelled as spam in the training set."
+  ],
+  "action": "Leave the message untouched. Check with the sender through an independently known channel.",
+  "detector_ms": 14.932,
+  "adviser": "local Llama / ExecuTorch",
+  "priority_guidance": "A link in a message can lead somewhere unexpected. Open the service's app yourself to check.",
+  "adviser_ms": 25170.875
+}
+wall_s=25.39 cpu=194% peak_process_kib=1024756 exit=0
+{
+  "verdict": "review",
+  "spam_model_score": 0.81124,
+  "evidence": [
+    "Contains a web link.",
+    "Uses urgency or account restrictions.",
+    "Wording resembles messages labelled as spam in the training set."
+  ],
+  "action": "Leave the message untouched. Check with the sender through an independently known channel.",
+  "detector_ms": 15.063,
+  "adviser": "local Llama / ExecuTorch",
+  "priority_guidance": "A link in a message can lead somewhere unexpected. Open the service's app yourself to check.",
+  "adviser_ms": 25076.031
+}
+wall_s=25.29 cpu=194% peak_process_kib=1024852 exit=0

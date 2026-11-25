@@ -1,0 +1,29 @@
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+build/
+dist/*.egg-info/
+*.egg-info/
+.venv/
+venv/
+
+# Local model weights, compiled native runners, and large binaries
+llama-bundle/
+*.pte
+*.pth
+*.safetensors
+*.bin
+*.model
+*.so
+
+# Local notes, personal guides, and reference slides
+PI_AGENT_HANDOFF.md
+DEMO_GUIDE.md
+Untitled 1.odt
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+*.swp
+*~

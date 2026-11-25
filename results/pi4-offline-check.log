@@ -1,0 +1,11 @@
+=== OFFLINE CHECK 2026-11-25T20:39:56+05:30 ===
+lo               UNKNOWN        127.0.0.1/8 ::1/128 
+eth0             UP             10.42.0.250/24 
+wlan0            DOWN           
+10.42.0.0/24 dev eth0 proto kernel scope link src 10.42.0.250 metric 100 
+ping: connect: Network is unreachable
+PING_1_1_1_1_FAILED_AS_EXPECTED
+b0e6aee04ab3c086ac514efce92d9d9f1174de66d395ae851b584fb9bedf7dbb  /home/shiva/arm/llama-bundle/adviser.pte
+82e9d31979e92ab929cd544440f129d9ecd797b69e327f80f17e1c50d5551b55  /home/shiva/arm/llama-bundle/tokenizer.model
+af7f4a9de689b3578093699da77290fddd197780d22e438c6ae595969cee07d2  /home/shiva/arm/llama-bundle/llama_main
+eb1c1175a36f83063928b58a22a8f34fe94eb8e61fce4449068f14adc36be2f4  /home/shiva/arm/llama-bundle/libllama_runner.so

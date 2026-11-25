@@ -1,79 +1,114 @@
-# SMS Guard for Bharat AI-SoC PS3
+# SMS Guard — Offline Edge AI Scam & Phishing Triage (Bharat AI-SoC PS3)
 
-Paste an English SMS to get a review decision, the cues behind it, and an action you can take. The program runs locally. It treats URLs as text, never visits them, and keeps no message history.
+**SMS Guard** is a privacy-preserving, completely offline SMS triage assistant built for the **Bharat AI-SoC Challenge (Problem Statement 3)** on **Raspberry Pi 4B (4 GB, Arm Cortex-A72, 64-bit Linux)**.
 
-## Brief report and Pi handoff
+Given an English SMS, it runs a two-stage local pipeline:
+1. **Stage 1 — Fast Deterministic Detector (`~15 ms`):** Normalises text, extracts lexical/URL/urgency/secret cues, and evaluates a multinomial Naive Bayes classifier (`sms_guard/detect.py`, `sms_guard/model.json`).
+2. **Stage 2 — Bounded Local LLM Adviser (`~19–25 s`):** Passes only the detector verdict, evidence, and pre-vetted guidance options to **Llama 3.2 1B Instruct** quantized for **ExecuTorch `release/1.0` + XNNPACK** (`sms_guard/adviser.py`), selecting the highest-priority user action without external network access.
 
-| Component | Status on 20 November 2026 |
-| --- | --- |
-| SMS detector | Working on the x86-64 development host. On 1,031 held-out English SMS messages, it flagged 120 of 128 spam messages and 6 of 903 ordinary messages. |
-| Raspberry Pi 4B, 4 GB | Deployment target. The first board task is to run the two examples below with the bundled detector. Training is already complete. |
-| Llama advisory | Adapter implemented. The local model, tokenizer and native ExecuTorch runner must be supplied. Inference speed, memory use and advice quality on this board remain unmeasured. |
+Inputs are processed strictly in memory, URLs are treated as plain text (never fetched), and no message history is stored.
 
-For code changes, start with [detect.py](sms_guard/detect.py) for scoring and evidence, [adviser.py](sms_guard/adviser.py) for Llama selection, and [the CLI](sms_guard/__main__.py) for input, timing and failure reporting. The competition slides are in [the attached document](Untitled%201.odt).
+---
 
-## Run the detector
+## Architecture
 
-From the project directory on a computer or a Raspberry Pi running 64-bit Raspberry Pi OS with Python 3.9 or later:
-
-```sh
-python3 -m sms_guard
+```text
+SMS Input ──▶ Normalise & Tokenise ──▶ Naive Bayes + Rules ──▶ Structured Evidence
+                                                                       │
+User Action ◀── Bounded Selection Validation ◀── Llama 3.2 1B (ExecuTorch XNNPACK)
 ```
 
-Paste one message and press Enter. For a repeatable demo, try both inputs:
+The detector owns the threat classification (`review` vs. `no strong signal`) and supporting indicators; the local LLM never invents arbitrary advice or overrides the detector verdict.
+
+---
+
+## Verified Raspberry Pi 4B (4 GB) Performance
+
+Measured completely offline (`wlan0 DOWN`, no default route) on **Raspberry Pi 4 Model B Rev 1.2**, **Debian GNU/Linux 13 (`trixie`, `aarch64`)**, **Python 3.13.5**, **ExecuTorch `release/1.0`** (`7b220c6f4ecc0a8b504a9c516e5643a2cf2d4376`). See [REPORT.md](REPORT.md) and [results/](results/) for full logs and SHA-256 checksums.
+
+| Mode | Sample | Verdict | Detector (ms) | Adviser (ms) | Wall Time (s) | Peak RSS (MiB) |
+| --- | --- | --- | ---: | ---: | ---: | ---: |
+| Detector only | Routine SMS | `no strong signal` | 15.02–15.12 | — | 0.21–0.22 | 15.8 |
+| Detector only | Suspicious SMS | `review` | 15.07–15.22 | — | 0.21–0.22 | 15.8 |
+| Detector + Llama 3.2 1B | Routine SMS | `no strong signal` | 14.90–15.05 | 19,390–19,397 | 19.61 | ~1,001 |
+| Detector + Llama 3.2 1B | Suspicious SMS | `review` | 14.93–15.37 | 25,076–25,171 | 25.29–25.39 | ~1,001 |
+
+- **System RAM headroom across 6 runs (133 samples):** Peak `1,241 MiB / 3,795 MiB` used, minimum `2,553 MiB` available, **`0 MiB` swap used**.
+- **Held-out classification baseline (`1,031` UCI SMS messages):** Precision `95.24%`, Recall `93.75%`, False-Positive Rate `0.66%` (`120 TP, 897 TN, 6 FP, 8 FN`).
+
+---
+
+## Repository Layout
+
+| Path | Purpose |
+| --- | --- |
+| `sms_guard/__main__.py` | CLI entry point (interactive/piped input, JSON output, timing, exit status) |
+| `sms_guard/detect.py` | Text normalisation, rule cues, and Naive Bayes scoring |
+| `sms_guard/model.json` | Bundled Naive Bayes vocabulary weights and prior bias |
+| `sms_guard/adviser.py` | Bounded Llama 3.2 1B prompt builder, ExecuTorch subprocess runner, and output validator |
+| `scripts/setup_pi.sh` | Step-by-step Raspberry Pi 4B setup and smoke test |
+| `scripts/demo.sh` | End-to-end offline demo script for Raspberry Pi 4B |
+| `scripts/benchmark.sh` | Repeatable 3×2 benchmark harness using `/usr/bin/time` |
+| `scripts/train.py` | Reproducible training & evaluation script against UCI SMS Spam Collection |
+| `dist/` | Zero-dependency installable Python wheel (`sms_guard_ps3-0.1.0-py3-none-any.whl`) |
+| `results/` | Raw Raspberry Pi 4B offline logs (`pi4-detector.log`, `pi4-adviser.log`, `pi4-adviser-mem.log`, `pi4-offline-check.log`) |
+| `REPORT.md` | Full engineering report (methodology, optimization, hardware utilization, results) |
+
+---
+
+## Quick Start on Raspberry Pi 4B (64-bit)
+
+### 1. Run Setup & Detector Baseline
+
+```sh
+./scripts/setup_pi.sh
+```
+
+Or run directly from source (zero third-party runtime dependencies, Python >= 3.9):
 
 ```sh
 echo 'Meet you at the library after lunch.' | python3 -m sms_guard
 echo 'Account locked. Verify now at https://account.example.invalid' | python3 -m sms_guard
 ```
 
-Expected verdicts in order are `no strong signal` and `review`. The second result should list both the web link and urgency as evidence. Both runs should report `detector guidance only`.
+Or install the offline wheel in a virtual environment:
 
-Alternatively, copy the wheel in `dist/` to the Pi. In a Python virtual environment, run `python -m pip install --no-index sms_guard_ps3-0.1.0-py3-none-any.whl`, then `sms-guard`. The trained detector is included. The wheel has no third-party Python runtime dependencies.
+```sh
+python3 -m venv .venv
+.venv/bin/python -m pip install --no-index --no-deps dist/sms_guard_ps3-0.1.0-py3-none-any.whl
+echo 'Account locked. Verify now at https://account.example.invalid' | .venv/bin/sms-guard
+```
 
-## Add Llama advice on the Pi
+### 2. Enable Local Llama 3.2 1B Advice (ExecuTorch + XNNPACK)
 
-The proposed target is the 4 GB Pi 4B CPU with 64-bit Linux. The challenge allows Arm Linux devices. The mentor slides recommend selecting one scenario, generating structured detector evidence and using Llama for bounded advice. SMS is the primary scenario here. URL features apply to links in messages. Standalone phishing-site classification and network-flow monitoring are future extensions. [Challenge brief](https://arm-education.github.io/Arm-Developer-Labs/Bharat_AI_SoC_2026_27.html)
+Due to Meta Llama licensing and binary size, weights and compiled binaries are staged outside Git under `./llama-bundle/`:
+- `llama_main` and `libllama_runner.so`: Cross-compiled from ExecuTorch `release/1.0` targeting Arm Cortex-A72 (`-mcpu=cortex-a72`, `--preset llm`, `XNNPACK` + `KleidiAI`).
+- `adviser.pte`: Exported from `meta-llama/Llama-3.2-1B-Instruct` (`qmode=8da4w`, `group_size=128`, `embedding_quantize=4,32`, `use_kv_cache=True`, `use_sdpa_with_kv_cache=True`, `max_seq_length=512`, `XNNPACK`).
+- `tokenizer.model`: Original Llama 3.2 tokenizer.
 
-1. Prepare the licensed Llama 3.2 1B Instruct checkpoint and matching original tokenizer on a development machine. Use a matching ExecuTorch release/1.0 exporter and Linux runner. Target XNNPACK CPU with 8-bit dynamic activations, 4-bit weights and quantized embeddings. Arm provides a 1B export recipe. [Model preparation](https://learn.arm.com/learning-paths/mobile-graphics-and-gaming/build-llama3-chat-android-app-using-executorch-and-xnnpack/4-prepare-llama-models/)
-2. Build the Linux AArch64 `llama_main` and its shared libraries for the Pi 4 Cortex-A72. Use a generic Armv8-A or Cortex-A72 build target. Arm's Pi 5 instructions describe the toolchain and bundle layout. The combination of this 1B export and Pi 4 build still needs validation on the board. [ExecuTorch setup](https://learn.arm.com/learning-paths/embedded-and-microcontrollers/rpi-llama3/executorch/) · [Linux runner deployment](https://learn.arm.com/learning-paths/embedded-and-microcontrollers/rpi-llama3/run/)
-3. Copy the runner, libraries, exported model and tokenizer into a local directory on the Pi. With the following layout, run:
+Run with the local bundle:
 
 ```sh
 bundle="$PWD/llama-bundle"
 export LD_LIBRARY_PATH="$bundle${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
-python3 -m sms_guard --runner "$bundle/llama_main" --model "$bundle/adviser.pte" --tokenizer "$bundle/tokenizer.model"
+python3 -m sms_guard \
+  --runner "$bundle/llama_main" \
+  --model "$bundle/adviser.pte" \
+  --tokenizer "$bundle/tokenizer.model"
 ```
 
-The runner receives detector evidence and a numbered list of applicable explanations and actions. Llama prioritises one for the user. Only a valid selection is shown. Timeout, runtime or parsing failures leave the original detector guidance visible and return a failing exit status. The detector-only mode and successful local inference have distinct output labels. No Llama weights or native runner are bundled.
-
-## Engineering baseline
-
-The classifier is a multinomial Naive Bayes model. Training clips repeated token counts at three, discards training tokens seen fewer than twice, and applies add-one smoothing. The review policy triggers at a spam model score of 0.5, an apparent request for a secret, or an urgent message containing a link. The score describes the text model alone and has no fraud-probability calibration. A short URL contributes an explanation. A routine message can contain any of these cues.
-
-The experiment uses a deterministic, stratified 80/20 split after normalising and grouping identical text and excluding conflicting groups. The vocabulary comes from the training partition. Reproduce from the project root:
+### 3. Reproduce Benchmarks & Training
 
 ```sh
+# Offline benchmark (detector + adviser)
+mkdir -p results
+scripts/benchmark.sh > results/pi4-detector.log 2>&1
+scripts/benchmark.sh \
+  --runner "$bundle/llama_main" \
+  --model "$bundle/adviser.pte" \
+  --tokenizer "$bundle/tokenizer.model" > results/pi4-adviser.log 2>&1
+
+# Rebuild detector weights from UCI SMS Spam Collection
 curl -fLsS https://archive.ics.uci.edu/static/public/228/sms+spam+collection.zip -o /tmp/sms-collection.zip
 python3 scripts/train.py /tmp/sms-collection.zip
 ```
-
-The script checks the archive digest and rebuilds the bundled model. Training used 3,614 ham and 514 spam messages. On 1,031 held-out messages the full review policy produced 120 true positives, 897 true negatives, 6 false positives and 8 false negatives. Precision was 95.24%, recall 93.75%, and the false-positive rate 0.66%. Related message templates can occur across partitions. This historical English spam corpus leaves present-day phishing, Indian payment scams and multilingual messages unvalidated. Data credit: Almeida and Hidalgo, SMS Spam Collection, UCI Machine Learning Repository. [Dataset and licensing](https://archive.ics.uci.edu/dataset/228/sms%2Bspam%2Bcollection)
-
-## Target evidence and demo
-
-On the Pi, disconnect from the internet and run `scripts/benchmark.sh` from the project root. Repeat with the three adviser flags above. GNU time is required at `/usr/bin/time`. Each example starts a fresh process three times. Save stdout and stderr together. Record board, OS, model digest, quantization, ExecuTorch commit, offline status, successful selections, detector and adviser latency, CPU use and peak process RSS. GNU time's peak is for a process in the command tree and does not measure combined simultaneous memory use. Capture system memory and swap during inference to assess 4 GB headroom.
-
-From the project root, with the bundle and library path set as above, capture both runs:
-
-```sh
-mkdir -p results
-scripts/benchmark.sh > results/pi4-detector.log 2>&1
-scripts/benchmark.sh --runner "$bundle/llama_main" --model "$bundle/adviser.pte" --tokenizer "$bundle/tokenizer.model" > results/pi4-adviser.log 2>&1
-```
-
-A successful full run exits zero and prints `"adviser": "local Llama / ExecuTorch"` plus `priority_guidance` for each example. If it exits early, inspect the last record in the adviser log and report the failing stage. Keep the Pi logs with the report.
-
-For the walkthrough, show the board and offline state, compare a routine SMS with a suspicious SMS, point out the detector evidence, and show the local Llama selection and timing. Ask a first-time user to explain the risk and identify an independent verification step. Record whether they succeed without prompting. Board results, user observations and a recorded demo remain outstanding.
-
-Open Qualifying is due 23 November 2026. Prepare the GitHub source, installable app, demonstration video and engineering report with measured device results. The PoC deadline for shortlisted teams is 5 February 2027. [Official timeline and submission guidance](https://arm-education.github.io/Arm-Developer-Labs/Bharat_AI_SoC_2026_27.html)

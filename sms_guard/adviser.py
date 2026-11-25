@@ -27,8 +27,13 @@ def advise(result, runner, model, tokenizer):
                            "--tokenizer_path=" + tokenizer, "--prompt=" + prompt,
                            "--cpu_threads=3", "--temperature=0", "--max_new_tokens=8"],
                           capture_output=True, text=True, timeout=180, check=True)
-    reply = proc.stdout.removeprefix(prompt).replace("<|eot_id|>", "").strip()
-    match = re.fullmatch(r"([1-9])[.)]?", reply)
+    reply = proc.stdout.removeprefix(prompt)
+    reply = re.sub(r"(?m)^PyTorchObserver\s+.*$", "", reply)
+    reply = reply.replace("<|eot_id|>", "").strip()
+    match = re.fullmatch(r"([1-9])(?:\s*[.)](?:\s*(.+))?)?", reply, re.DOTALL)
     if not match or int(match[1]) > len(options):
         raise ValueError("The local model returned an invalid advisory selection.")
-    return options[int(match[1]) - 1]
+    choice = options[int(match[1]) - 1]
+    if match[2] and not choice.startswith(match[2].strip()):
+        raise ValueError("The local model returned an invalid advisory selection.")
+    return choice
